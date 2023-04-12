@@ -60,11 +60,12 @@ std::unordered_map<uint16_t, CRGBA> PickupColorsMap {
     {325, PickupColors::Gift},{337, PickupColors::Melee},{336, PickupColors::Melee},
     {346, PickupColors::Handgun},{347, PickupColors::Handgun},{348, PickupColors::Handgun},
     {349, PickupColors::Shotgun},{350, PickupColors::Shotgun},{351, PickupColors::Shotgun},
-    {355, PickupColors::Assault},{356, PickupColors::Assault},{},
-    {},{},{},
-    {},{},{},
-    {},{},{},
-    {},{},{},
+    {355, PickupColors::Assault},{356, PickupColors::Assault},{342, PickupColors::Throwable},
+    {343, PickupColors::Throwable},{344, PickupColors::Throwable},{359, PickupColors::Heavy},
+    {360, PickupColors::Heavy},{361, PickupColors::Heavy},{362, PickupColors::Heavy},
+    {363, PickupColors::Throwable},{365, PickupColors::Special1},{367, PickupColors::Special1},
+    {368, PickupColors::Special1},{369, PickupColors::Special1},{370, PickupColors::Special1},
+    {366, PickupColors::Misc},{371, PickupColors::Misc},{1275, PickupColors::PropertyLocked},
 };
 std::unordered_set<uint16_t> PickupsOnlyCentered {
     1239, 1240, 1241, 1247, 1253, 1254, 1313, 1274, 1275, 1272, 1273, 1314, 1277
