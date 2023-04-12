@@ -1,6 +1,7 @@
 #include <mod/amlmod.h>
 #include <mod/logger.h>
 #include <mod/config.h>
+#include <unordered_set>
 #include <unordered_map>
 
 #include <GTASA_STRUCTS.h>
@@ -65,6 +66,13 @@ std::unordered_map<uint16_t, CRGBA> PickupColorsMap {
     {},{},{},
     {},{},{},
 };
+std::unordered_set<uint16_t> PickupsOnlyCentered {
+    1239, 1240, 1241, 1247, 1253, 1254, 1313, 1274, 1275, 1272, 1273, 1314, 1277
+};
+inline bool IsCenteredOnly(uint16_t modelIdx)
+{
+    return PickupsOnlyCentered.find(modelIdx) != PickupsOnlyCentered.end();
+}
 
 // Game Vars
 CCamera* TheCamera;
@@ -78,9 +86,9 @@ void (*StoreStaticShadow)(unsigned int, unsigned char, RwTexture*, CVector*, flo
 void (*AddLight)(unsigned char, CVector, CVector, float, float, float, float, unsigned char, bool, CEntity*);
 
 // Own Funcs
-static const uint8_t PickupCoronaIntensity = 96;
-static const uint8_t PickupOuterCoronaIntensity = 64;
-static const uint8_t PickupInnerCoronaIntensity = 96;
+static const uint8_t PickupCoronaIntensity = 128;
+static const uint8_t PickupOuterCoronaIntensity = 96;
+static const uint8_t PickupInnerCoronaIntensity = 128;
 
 inline void DoPickupGlowing(CPickup* pu)
 {
@@ -102,7 +110,7 @@ inline void DoPickupGlowing(CPickup* pu)
                 uint8_t intensity = (uint8_t)((14.0f - distance) * (0.5f * sine + 0.5f) * 0.0714285746f * 255.0f);
                 
                 RegisterCorona((unsigned int)(pu->m_pObject), NULL, intensity, intensity, intensity, PickupCoronaIntensity, pu->m_pObject->GetPosition(),
-                               0.6f, 40.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               0.6f, 40.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
                                   intensity, intensity, intensity, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
@@ -119,9 +127,8 @@ inline void DoPickupGlowing(CPickup* pu)
                 
                 uint8_t intensity = (uint8_t)((20.0f - distance) * (0.2f * sine + 0.3) * 0.05f * 64.0f);
                 
-                logger->Info("Upd %d %f %d", (int)pu->m_pObject->m_nModelIndex, distance, (int)intensity);
                 RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, intensity, 0, PickupCoronaIntensity, pu->m_pObject->GetPosition(),
-                               0.25f, 40.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               0.25f, 40.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
                                   0, intensity, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
@@ -131,6 +138,15 @@ inline void DoPickupGlowing(CPickup* pu)
         default:
         {
             if(pu->m_nPickupType == PICKUP_NONE) break;
+            
+            unsigned int asId = (unsigned int)(pu->m_pObject);
+            CRGBA clr = PickupColors::FindFor(pu->m_pObject->m_nModelIndex);
+            if(IsCenteredOnly(pu->m_pObject->m_nModelIndex))
+            {
+                RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
+                               PickupCoronaIntensity, pu->m_pObject->GetPosition(), 1.2f, 50.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                break;
+            }
             
             bool glowInner, glowOuter;
             
@@ -143,35 +159,33 @@ inline void DoPickupGlowing(CPickup* pu)
             if(glowStage2 == 3) glowInner = (rand() & 3) != 0;
             else if(glowStage2 > 3) glowInner = true;
             
-            CRGBA clr = PickupColors::FindFor(pu->m_pObject->m_nModelIndex);
-            
             if(glowOuter)
             {
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
-                               0.76f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
-                StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
-                                  (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                RegisterCorona(asId, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
+                               0.76f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                                  (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
                                   
                 float lightRange = (rand() % 0xF) * 0.1f + 3.0f;
                 AddLight(0, pu->m_pObject->GetPosition(), CVector(), lightRange, (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
             }
             else
             {
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, 0, 0, PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
-                               0.76f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                RegisterCorona(asId, NULL, 0, 0, 0, PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
+                               0.76f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
             
             if(glowInner)
             {
-                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
-                               0.6f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
-                StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
-                                  (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                RegisterCorona(asId+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
+                               0.6f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                                  (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             else
             {
-                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
-                               0.6f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                RegisterCorona(asId+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
+                               0.6f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
             
             break;
