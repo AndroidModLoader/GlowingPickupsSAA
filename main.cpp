@@ -50,8 +50,16 @@ namespace PickupColors
 std::unordered_map<uint16_t, CRGBA> PickupColorsMap {
     {372, PickupColors::Submachine},{352, PickupColors::Submachine},{353, PickupColors::Submachine},
     {358, PickupColors::Sniper},{357, PickupColors::Sniper},{1239, PickupColors::Yellow},
-    {},{},{},
-    {},{},{},
+    {1240, PickupColors::Health},{1242, PickupColors::Armour},{1274, PickupColors::Yellow},
+    {1247, PickupColors::Yellow},{1272, PickupColors::PropertyLocked},{1273, PickupColors::PropertySale},
+    {326, PickupColors::Melee},{331, PickupColors::Melee},{333, PickupColors::Melee},
+    {335, PickupColors::Melee},{338, PickupColors::Melee},{339, PickupColors::Melee},
+    {341, PickupColors::Melee},{334, PickupColors::Melee},{321, PickupColors::Gift},
+    {322, PickupColors::Gift},{323, PickupColors::Gift},{324, PickupColors::Gift},
+    {325, PickupColors::Gift},{337, PickupColors::Melee},{336, PickupColors::Melee},
+    {346, PickupColors::Handgun},{347, PickupColors::Handgun},{348, PickupColors::Handgun},
+    {349, PickupColors::Shotgun},{350, PickupColors::Shotgun},{351, PickupColors::Shotgun},
+    {355, PickupColors::Assault},{356, PickupColors::Assault},{},
     {},{},{},
     {},{},{},
     {},{},{},
@@ -70,7 +78,11 @@ void (*StoreStaticShadow)(unsigned int, unsigned char, RwTexture*, CVector*, flo
 void (*AddLight)(unsigned char, CVector, CVector, float, float, float, float, unsigned char, bool, CEntity*);
 
 // Own Funcs
-void DoPickupGlowing(CPickup* pu)
+static const uint8_t PickupCoronaIntensity = 96;
+static const uint8_t PickupOuterCoronaIntensity = 64;
+static const uint8_t PickupInnerCoronaIntensity = 96;
+
+inline void DoPickupGlowing(CPickup* pu)
 {
     if(pu->m_nFlags.bDisabled || !pu->m_nFlags.bVisible || !pu->m_pObject) return;
     
@@ -89,7 +101,7 @@ void DoPickupGlowing(CPickup* pu)
                 
                 uint8_t intensity = (uint8_t)((14.0f - distance) * (0.5f * sine + 0.5f) * 0.0714285746f * 255.0f);
                 
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, intensity, intensity, intensity, 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject), NULL, intensity, intensity, intensity, PickupCoronaIntensity, pu->m_pObject->GetPosition(),
                                0.6f, 40.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
                                   intensity, intensity, intensity, 4.0f, 1.0f, 40.0f, false, 0.0f);
@@ -108,7 +120,7 @@ void DoPickupGlowing(CPickup* pu)
                 uint8_t intensity = (uint8_t)((20.0f - distance) * (0.2f * sine + 0.3) * 0.05f * 64.0f);
                 
                 logger->Info("Upd %d %f %d", (int)pu->m_pObject->m_nModelIndex, distance, (int)intensity);
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, intensity, 0, 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, intensity, 0, PickupCoronaIntensity, pu->m_pObject->GetPosition(),
                                0.25f, 40.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
                                   0, intensity, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
@@ -135,30 +147,30 @@ void DoPickupGlowing(CPickup* pu)
             
             if(glowOuter)
             {
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject), NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
                                0.76f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
-                                  (uint8_t)(clr.r * 0.3f), (uint8_t)(clr.g * 0.3f), (uint8_t)(clr.b * 0.3f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                                  (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f), 4.0f, 1.0f, 40.0f, false, 0.0f);
                                   
                 float lightRange = (rand() % 0xF) * 0.1f + 3.0f;
                 AddLight(0, pu->m_pObject->GetPosition(), CVector(), lightRange, (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
             }
             else
             {
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, 0, 0, 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, 0, 0, PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
                                0.76f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
             
             if(glowInner)
             {
-                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
                                0.6f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
-                                  (uint8_t)(clr.r * 0.3f), (uint8_t)(clr.g * 0.3f), (uint8_t)(clr.b * 0.3f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                                  (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f), 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             else
             {
-                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, 0, 0, 0, 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
                                0.6f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
             
