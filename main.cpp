@@ -85,6 +85,7 @@ CPickup* aPickups;
 void (*RegisterCorona)(unsigned int, CEntity*, unsigned char, unsigned char, unsigned char, unsigned char, CVector const&, float, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, float, bool, float, bool, float, bool, bool);
 void (*StoreStaticShadow)(unsigned int, unsigned char, RwTexture*, CVector*, float, float, float, float, short, unsigned char, unsigned char, unsigned char, float, float, float, bool, float);
 void (*AddLight)(unsigned char, CVector, CVector, float, float, float, float, unsigned char, bool, CEntity*);
+CPlayerPed* (*FindPlayerPed)(unsigned int);
 
 // Own Funcs
 static const uint8_t PickupCoronaIntensity = 128;
@@ -95,7 +96,10 @@ inline void DoPickupGlowing(CPickup* pu)
 {
     if(pu->m_nFlags.bDisabled || !pu->m_nFlags.bVisible || !pu->m_pObject) return;
     
-    float distance = DistanceBetweenPoints(TheCamera->m_vecGameCamPos, pu->m_pObject->GetPosition());
+    CVector& ppos = pu->m_pObject->GetPosition();
+    float distance = DistanceBetweenPoints(TheCamera->m_vecGameCamPos, ppos);
+    unsigned int asId = (unsigned int)(pu->m_pObject);
+    
     switch(pu->m_pObject->m_nModelIndex)
     {
         case 953:
@@ -104,15 +108,15 @@ inline void DoPickupGlowing(CPickup* pu)
         {
             if(distance < 14.0f)
             {
-                const short seed = (static_cast<unsigned short>(*m_snTimeInMilliseconds) + static_cast<unsigned short>((int)pu->m_pObject)) & 0x7FF;
+                const short seed = (static_cast<unsigned short>(*m_snTimeInMilliseconds) + static_cast<unsigned short>(asId)) & 0x7FF;
                 double sine = sin((double)(seed * 0.00306640635));
                 if (static_cast<unsigned short>(sine) & 0x400) sine = 3.141592653589793116 * distance / 180.0;
                 
                 uint8_t intensity = (uint8_t)((14.0f - distance) * (0.5f * sine + 0.5f) * 0.0714285746f * 255.0f);
                 
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, intensity, intensity, intensity, PickupCoronaIntensity, pu->m_pObject->GetPosition(),
+                RegisterCorona(asId, NULL, intensity, intensity, intensity, PickupCoronaIntensity, ppos,
                                0.6f, 40.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
-                StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   intensity, intensity, intensity, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             break;
@@ -122,15 +126,15 @@ inline void DoPickupGlowing(CPickup* pu)
         {
             if(distance < 20.0f)
             {
-                const short seed = (static_cast<unsigned short>(*m_snTimeInMilliseconds) + static_cast<unsigned short>((int)pu->m_pObject)) & 0x7FF;
+                const short seed = (static_cast<unsigned short>(*m_snTimeInMilliseconds) + asId) & 0x7FF;
                 double sine = sin((double)(seed * 0.00306640635));
                 if (static_cast<unsigned short>(sine) & 0x400) sine = 3.141592653589793116 * distance / 180.0;
                 
                 uint8_t intensity = (uint8_t)((20.0f - distance) * (0.2f * sine + 0.3) * 0.05f * 64.0f);
                 
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, intensity, 0, PickupCoronaIntensity, pu->m_pObject->GetPosition(),
+                RegisterCorona(asId, NULL, 0, intensity, 0, PickupCoronaIntensity, ppos,
                                0.25f, 40.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
-                StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   0, intensity, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             break;
@@ -140,12 +144,11 @@ inline void DoPickupGlowing(CPickup* pu)
         {
             if(pu->m_nPickupType == PICKUP_NONE) break;
             
-            unsigned int asId = (unsigned int)(pu->m_pObject);
             CRGBA clr = PickupColors::FindFor(pu->m_pObject->m_nModelIndex);
             if(IsCenteredOnly(pu->m_pObject->m_nModelIndex))
             {
                 RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
-                               PickupCoronaIntensity, pu->m_pObject->GetPosition(), 1.2f, 50.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               PickupCoronaIntensity, ppos, 1.2f, 50.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 break;
             }
             
@@ -162,30 +165,30 @@ inline void DoPickupGlowing(CPickup* pu)
             
             if(glowOuter)
             {
-                RegisterCorona(asId, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
+                RegisterCorona(asId, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, ppos,
                                0.76f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
-                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
                                   
                 float lightRange = (rand() % 0xF) * 0.1f + 3.0f;
-                AddLight(0, pu->m_pObject->GetPosition(), CVector(), lightRange, (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
+                if(FindPlayerPed(-1)->m_nInterior == 0) AddLight(0, ppos, CVector(), lightRange, (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
             }
             else
             {
-                RegisterCorona(asId, NULL, 0, 0, 0, PickupOuterCoronaIntensity, pu->m_pObject->GetPosition(),
+                RegisterCorona(asId, NULL, 0, 0, 0, PickupOuterCoronaIntensity, ppos,
                                0.76f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
             
             if(glowInner)
             {
-                RegisterCorona(asId+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
+                RegisterCorona(asId+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, ppos,
                                0.6f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
-                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             else
             {
-                RegisterCorona(asId+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, pu->m_pObject->GetPosition(),
+                RegisterCorona(asId+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, ppos,
                                0.6f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
             
@@ -218,6 +221,7 @@ extern "C" void OnModLoad()
     SET_TO(RegisterCorona, aml->GetSym(hGTASA, "_ZN8CCoronas14RegisterCoronaEjP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb"));
     SET_TO(StoreStaticShadow, aml->GetSym(hGTASA, "_ZN8CShadows17StoreStaticShadowEjhP9RwTextureP7CVectorffffshhhfffbf"));
     SET_TO(AddLight, aml->GetSym(hGTASA, "_ZN12CPointLights8AddLightEh7CVectorS0_ffffhbP7CEntity"));
+    SET_TO(FindPlayerPed, aml->GetSym(hGTASA, "_Z13FindPlayerPedi"));
     
     HOOK(ProcessGame, aml->GetSym(hGTASA, "_ZN5CGame7ProcessEv"));
 }
