@@ -15,9 +15,8 @@ NEEDGAME(com.rockstargames.gtasa)
 // Savings
 uintptr_t pGTASA;
 void* hGTASA;
-std::unordered_map<uint16_t, CRGBA> PickupColorsMap {
-    {},
-};
+
+extern std::unordered_map<uint16_t, CRGBA> PickupColorsMap;
 namespace PickupColors
 {
     const CRGBA Default(0x80, 0x80, 0x80);
@@ -33,12 +32,30 @@ namespace PickupColors
     const CRGBA Health(0xFF, 0x64, 0x64);
     const CRGBA Armour(0x80, 0xFF, 0x80);
     
+    const CRGBA Gift(0xF3, 0x44, 0x67);
+    const CRGBA Special1(0xA6, 0xE2, 0xD2);
+    const CRGBA Special2(0x3A, 0x3D, 0xD9);
+    const CRGBA PropertySale(0x64, 0xFF, 0x64);
+    const CRGBA PropertyLocked(0x64, 0x64, 0xFF);
+    const CRGBA Yellow(0xFF, 0xFF, 0x64);
+    const CRGBA Purple(0xFF, 0x8B, 0xF4);
+    
     inline CRGBA FindFor(uint16_t modelIdx)
     {
         auto it = PickupColorsMap.find(modelIdx);
         if(it == PickupColorsMap.end()) return PickupColors::Default;
         return it->second;
     }
+};
+std::unordered_map<uint16_t, CRGBA> PickupColorsMap {
+    {372, PickupColors::Submachine},{352, PickupColors::Submachine},{353, PickupColors::Submachine},
+    {358, PickupColors::Sniper},{357, PickupColors::Sniper},{1239, PickupColors::Yellow},
+    {},{},{},
+    {},{},{},
+    {},{},{},
+    {},{},{},
+    {},{},{},
+    {},{},{},
 };
 
 // Game Vars
@@ -50,6 +67,7 @@ CPickup* aPickups;
 // Game Funcs
 void (*RegisterCorona)(unsigned int, CEntity*, unsigned char, unsigned char, unsigned char, unsigned char, CVector const&, float, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, float, bool, float, bool, float, bool, bool);
 void (*StoreStaticShadow)(unsigned int, unsigned char, RwTexture*, CVector*, float, float, float, float, short, unsigned char, unsigned char, unsigned char, float, float, float, bool, float);
+void (*AddLight)(unsigned char, CVector, CVector, float, float, float, float, unsigned char, bool, CEntity*);
 
 // Own Funcs
 void DoPickupGlowing(CPickup* pu)
@@ -118,23 +136,30 @@ void DoPickupGlowing(CPickup* pu)
             if(glowOuter)
             {
                 RegisterCorona((unsigned int)(pu->m_pObject), NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), 255, pu->m_pObject->GetPosition(),
+                               0.76f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
+                                  (uint8_t)(clr.r * 0.3f), (uint8_t)(clr.g * 0.3f), (uint8_t)(clr.b * 0.3f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                                  
+                float lightRange = (rand() % 0xF) * 0.1f + 3.0f;
+                AddLight(0, pu->m_pObject->GetPosition(), CVector(), lightRange, (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
+            }
+            else
+            {
+                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, 0, 0, 255, pu->m_pObject->GetPosition(),
+                               0.76f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+            }
+            
+            if(glowInner)
+            {
+                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), 255, pu->m_pObject->GetPosition(),
                                0.6f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
                 StoreStaticShadow((unsigned int)(pu->m_pObject), 2, *gpShadowExplosionTex, &pu->m_pObject->GetPosition(), 2.0f, 0, 0, -2.0f, 0x10,
                                   (uint8_t)(clr.r * 0.3f), (uint8_t)(clr.g * 0.3f), (uint8_t)(clr.b * 0.3f), 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             else
             {
-                RegisterCorona((unsigned int)(pu->m_pObject), NULL, 0, 0, 0, 255, pu->m_pObject->GetPosition(),
+                RegisterCorona((unsigned int)(pu->m_pObject)+1, NULL, 0, 0, 0, 255, pu->m_pObject->GetPosition(),
                                0.6f, 65.0f, PICKUP_MINE_INACTIVE, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
-            }
-            
-            if(glowInner)
-            {
-                
-            }
-            else
-            {
-                
             }
             
             break;
@@ -165,6 +190,7 @@ extern "C" void OnModLoad()
     
     SET_TO(RegisterCorona, aml->GetSym(hGTASA, "_ZN8CCoronas14RegisterCoronaEjP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb"));
     SET_TO(StoreStaticShadow, aml->GetSym(hGTASA, "_ZN8CShadows17StoreStaticShadowEjhP9RwTextureP7CVectorffffshhhfffbf"));
+    SET_TO(AddLight, aml->GetSym(hGTASA, "_ZN12CPointLights8AddLightEh7CVectorS0_ffffhbP7CEntity"));
     
     HOOK(ProcessGame, aml->GetSym(hGTASA, "_ZN5CGame7ProcessEv"));
 }
