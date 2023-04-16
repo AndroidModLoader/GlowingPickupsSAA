@@ -15,6 +15,7 @@ NEEDGAME(com.rockstargames.gtasa)
 uintptr_t pGTASA;
 void* hGTASA;
 
+bool bDoBBoxCorona = true, bDoMoneyGlowing = true, bDoCollectiblesGlowing = true;
 extern std::unordered_map<uint16_t, CRGBA&> PickupColorsMap;
 namespace PickupColors
 {
@@ -95,6 +96,7 @@ void (*TransformPoint)(RwV3d& point, const CSimpleTransform& placement, const Rw
 
 // Own Funcs
 static uint8_t PickupCoronaIntensity = 128;
+static uint8_t PickupCenteredCoronaIntensity = 160;
 static uint8_t PickupOuterCoronaIntensity = 96;
 static uint8_t PickupInnerCoronaIntensity = 128;
 
@@ -122,7 +124,7 @@ inline void DoPickupGlowing(CPickup* pu)
         case 954:
         case 2782:
         {
-            if(distance < 14.0f)
+            if(bDoCollectiblesGlowing && distance < 14.0f)
             {
                 const short seed = (static_cast<unsigned short>(*m_snTimeInMilliseconds) + static_cast<unsigned short>(asId)) & 0x7FF;
                 double sine = sin((double)(seed * 0.00306640635));
@@ -140,7 +142,7 @@ inline void DoPickupGlowing(CPickup* pu)
         
         case 1212:
         {
-            if(distance < 20.0f)
+            if(bDoMoneyGlowing && distance < 20.0f)
             {
                 const short seed = (static_cast<unsigned short>(*m_snTimeInMilliseconds) + asId) & 0x7FF;
                 double sine = sin((double)(seed * 0.00306640635));
@@ -164,7 +166,7 @@ inline void DoPickupGlowing(CPickup* pu)
             if(IsCenteredOnly(pu->m_pObject->m_nModelIndex))
             {
                 RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
-                               PickupCoronaIntensity, ppos, 1.2f, 50.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               PickupCenteredCoronaIntensity, ppos, 1.2f, 50.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 break;
             }
             
@@ -207,6 +209,8 @@ inline void DoPickupGlowing(CPickup* pu)
                 RegisterCorona(asId+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, ppos,
                                0.6f, 65.0f, CORONATYPE_TORUS, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
             }
+            
+            if(!bDoBBoxCorona) break;
             
             CBaseModelInfo* mi = ms_modelInfoPtrs[pu->m_pObject->m_nModelIndex];
             if(mi) for(uint8_t i = 0; i < 4; ++i)
@@ -304,5 +308,13 @@ extern "C" void OnModLoad()
     CFG_COLOR(PropertySale);
     CFG_COLOR(PropertyLocked);
     CFG_COLOR(Yellow);
+    
     PickupCoronaIntensity = cfg->GetInt("PickupCoronaIntensity", (int)PickupCoronaIntensity);
+    PickupCenteredCoronaIntensity = cfg->GetInt("PickupCenteredCoronaIntensity", (int)PickupCenteredCoronaIntensity);
+    PickupOuterCoronaIntensity = cfg->GetInt("PickupOuterCoronaIntensity", (int)PickupOuterCoronaIntensity);
+    PickupInnerCoronaIntensity = cfg->GetInt("PickupInnerCoronaIntensity", (int)PickupInnerCoronaIntensity);
+    
+    bDoBBoxCorona = cfg->GetBool("DoBBoxCorona", bDoBBoxCorona);
+    bDoMoneyGlowing = cfg->GetBool("DoMoneyGlowing", bDoMoneyGlowing);
+    bDoCollectiblesGlowing = cfg->GetBool("DoCollectiblesGlowing", bDoCollectiblesGlowing);
 }
