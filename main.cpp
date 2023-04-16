@@ -6,8 +6,10 @@
 
 #include <GTASA_STRUCTS.h>
 
-MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.0.1, kagikn & RusJJ)
+MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.1, kagikn & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
+
+#define CFG_COLOR(__clr_var)  *(rgba_t*)&PickupColors::__clr_var = cfg->GetColor(#__clr_var, (rgba_t&)PickupColors::__clr_var, "Colors")
 
 // Savings
 uintptr_t pGTASA;
@@ -161,7 +163,7 @@ inline void DoPickupGlowing(CPickup* pu)
             CRGBA clr = PickupColors::FindFor(pu->m_pObject->m_nModelIndex);
             if(IsCenteredOnly(pu->m_pObject->m_nModelIndex))
             {
-                RegisterCorona(asId, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
+                RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
                                PickupCoronaIntensity, ppos, 1.2f, 50.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
                 break;
             }
@@ -284,4 +286,23 @@ extern "C" void OnModLoad()
     SET_TO(TransformPoint, aml->GetSym(hGTASA, "_Z14TransformPointR5RwV3dRK16CSimpleTransformRKS_"));
     
     HOOK(ProcessGame, aml->GetSym(hGTASA, "_ZN5CGame7ProcessEv"));
+    
+    CFG_COLOR(Default);
+    CFG_COLOR(Melee);
+    CFG_COLOR(Throwable);
+    CFG_COLOR(Handgun);
+    CFG_COLOR(Shotgun);
+    CFG_COLOR(Submachine);
+    CFG_COLOR(Assault);
+    CFG_COLOR(Sniper);
+    CFG_COLOR(Heavy);
+    CFG_COLOR(Misc);
+    CFG_COLOR(Health);
+    CFG_COLOR(Armour);
+    CFG_COLOR(Gift);
+    CFG_COLOR(Special1);
+    CFG_COLOR(PropertySale);
+    CFG_COLOR(PropertyLocked);
+    CFG_COLOR(Yellow);
+    PickupCoronaIntensity = cfg->GetInt("PickupCoronaIntensity", (int)PickupCoronaIntensity);
 }
