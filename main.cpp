@@ -4,9 +4,15 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#include <GTASA_STRUCTS.h>
+#ifdef AML32
+    #include "GTASA_STRUCTS.h"
+    #define BYVER(__for32, __for64) (__for32)
+#else
+    #include "GTASA_STRUCTS_210.h"
+    #define BYVER(__for32, __for64) (__for64)
+#endif
 
-MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.1, kagikn & RusJJ)
+MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.2, kagikn & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
 
 #define CFG_COLOR(__clr_var)  *(rgba_t*)&PickupColors::__clr_var = cfg->GetColor(#__clr_var, (rgba_t&)PickupColors::__clr_var, "Colors")
@@ -88,8 +94,8 @@ CPickup* aPickups;
 CBaseModelInfo** ms_modelInfoPtrs;
 
 // Game Funcs
-void (*RegisterCorona)(unsigned int, CEntity*, unsigned char, unsigned char, unsigned char, unsigned char, CVector const&, float, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, float, bool, float, bool, float, bool, bool);
-void (*StoreStaticShadow)(unsigned int, unsigned char, RwTexture*, CVector*, float, float, float, float, short, unsigned char, unsigned char, unsigned char, float, float, float, bool, float);
+void (*RegisterCorona)(uintptr_t, CEntity*, unsigned char, unsigned char, unsigned char, unsigned char, CVector const&, float, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, float, bool, float, bool, float, bool, bool);
+void (*StoreStaticShadow)(uintptr_t, unsigned char, RwTexture*, CVector*, float, float, float, float, short, unsigned char, unsigned char, unsigned char, float, float, float, bool, float);
 void (*AddLight)(unsigned char, CVector, CVector, float, float, float, float, unsigned char, bool, CEntity*);
 CPlayerPed* (*FindPlayerPed)(unsigned int);
 void (*TransformPoint)(RwV3d& point, const CSimpleTransform& placement, const RwV3d& vecPos);
@@ -116,7 +122,7 @@ inline void DoPickupGlowing(CPickup* pu)
     
     CVector& ppos = pu->m_pObject->GetPosition();
     float distance = DistanceBetweenPoints(TheCamera->m_vecGameCamPos, ppos);
-    unsigned int asId = (unsigned int)(pu->m_pObject);
+    uintptr_t asId = (uintptr_t)(pu->m_pObject);
     
     switch(pu->m_pObject->m_nModelIndex)
     {
@@ -277,14 +283,14 @@ extern "C" void OnModLoad()
     pGTASA = aml->GetLib("libGTASA.so");
     hGTASA = aml->GetLibHandle("libGTASA.so");
     
-    SET_TO(aPickups, *(uintptr_t*)(pGTASA + 0x678BF8));
+    SET_TO(aPickups, *(uintptr_t*)(pGTASA + BYVER(0x678BF8, 0x84F818)));
     SET_TO(TheCamera, aml->GetSym(hGTASA, "TheCamera"));
     SET_TO(m_snTimeInMilliseconds, aml->GetSym(hGTASA, "_ZN6CTimer22m_snTimeInMillisecondsE"));
     SET_TO(gpShadowExplosionTex, aml->GetSym(hGTASA, "gpShadowExplosionTex"));
     SET_TO(ms_modelInfoPtrs, aml->GetSym(hGTASA, "_ZN10CModelInfo16ms_modelInfoPtrsE"));
     
-    SET_TO(RegisterCorona, aml->GetSym(hGTASA, "_ZN8CCoronas14RegisterCoronaEjP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb"));
-    SET_TO(StoreStaticShadow, aml->GetSym(hGTASA, "_ZN8CShadows17StoreStaticShadowEjhP9RwTextureP7CVectorffffshhhfffbf"));
+    SET_TO(RegisterCorona, aml->GetSym(hGTASA, BYVER("_ZN8CCoronas14RegisterCoronaEjP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb", "_ZN8CCoronas14RegisterCoronaEyP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb")));
+    SET_TO(StoreStaticShadow, aml->GetSym(hGTASA, BYVER("_ZN8CShadows17StoreStaticShadowEjhP9RwTextureP7CVectorffffshhhfffbf", "_ZN8CShadows17StoreStaticShadowEyhP9RwTextureP7CVectorffffshhhfffbf")));
     SET_TO(AddLight, aml->GetSym(hGTASA, "_ZN12CPointLights8AddLightEh7CVectorS0_ffffhbP7CEntity"));
     SET_TO(FindPlayerPed, aml->GetSym(hGTASA, "_Z13FindPlayerPedi"));
     SET_TO(TransformPoint, aml->GetSym(hGTASA, "_Z14TransformPointR5RwV3dRK16CSimpleTransformRKS_"));
