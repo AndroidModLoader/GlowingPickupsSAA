@@ -12,7 +12,7 @@
     #define BYVER(__for32, __for64) (__for64)
 #endif
 
-MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.3, kagikn & RusJJ)
+MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.4, kagikn & RusJJ)
 NEEDGAME(com.rockstargames.gtasa)
 
 #define CFG_COLOR(__clr_var)  *(rgba_t*)&PickupColors::__clr_var = cfg->GetColor(#__clr_var, (rgba_t&)PickupColors::__clr_var, "Colors")
@@ -60,7 +60,7 @@ std::unordered_map<uint16_t, CRGBA&> PickupColorsMap
     {358,  PickupColors::Sniper},    {357,  PickupColors::Sniper},        {1239, PickupColors::Yellow},
     {1240, PickupColors::Health},    {1242, PickupColors::Armour},        {1274, PickupColors::Yellow},
     {1247, PickupColors::Yellow},    {1272, PickupColors::PropertyLocked},{1273, PickupColors::PropertySale},
-    {326,  PickupColors::Melee},     {331,  PickupColors::Melee},         {333,  PickupColors::Melee},
+    {326,  PickupColors::Gift},      {331,  PickupColors::Melee},         {333,  PickupColors::Melee},
     {335,  PickupColors::Melee},     {338,  PickupColors::Melee},         {339,  PickupColors::Melee},
     {341,  PickupColors::Melee},     {334,  PickupColors::Melee},         {321,  PickupColors::Gift},
     {322,  PickupColors::Gift},      {323,  PickupColors::Gift},          {324,  PickupColors::Gift},
@@ -140,7 +140,7 @@ inline void DoPickupGlowing(CPickup* pu)
                 uint8_t intensity = (uint8_t)((14.0f - distance) * (0.5f * sine + 0.5f) * 0.0714285746f * 255.0f);
                 
                 RegisterCorona(asId, NULL, intensity, intensity, intensity, PickupCoronaIntensity, ppos,
-                               0.6f, 40.0f, nCollectCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               0.6f, 40.0f, nCollectCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   intensity, intensity, intensity, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
@@ -158,7 +158,7 @@ inline void DoPickupGlowing(CPickup* pu)
                 uint8_t intensity = (uint8_t)((20.0f - distance) * (0.2f * sine + 0.3) * 0.05f * 64.0f);
                 
                 RegisterCorona(asId, NULL, 0, intensity, 0, PickupCoronaIntensity, ppos,
-                               0.25f, 40.0f, nMoneyCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               0.25f, 40.0f, nMoneyCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   0, intensity, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
@@ -173,7 +173,7 @@ inline void DoPickupGlowing(CPickup* pu)
             if(IsCenteredOnly(pu->m_pObject->m_nModelIndex))
             {
                 RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
-                               PickupCenteredCoronaIntensity, ppos, 1.2f, 50.0f, nCenteredCoronaType, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, true);
+                               PickupCenteredCoronaIntensity, ppos, 1.2f, 50.0f, nCenteredCoronaType, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, false);
                 break;
             }
             
@@ -191,7 +191,7 @@ inline void DoPickupGlowing(CPickup* pu)
             if(glowOuter)
             {
                 RegisterCorona(asId, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, ppos,
-                               0.76f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                               0.76f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
                                   
@@ -207,14 +207,14 @@ inline void DoPickupGlowing(CPickup* pu)
             if(glowInner)
             {
                 RegisterCorona(asId+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, ppos,
-                               0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                               0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
                                   (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             else
             {
                 RegisterCorona(asId+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, ppos,
-                               0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                               0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, false);
             }
             
             if(!bDoBBoxCorona) break;
@@ -260,7 +260,7 @@ inline void DoPickupGlowing(CPickup* pu)
                 }
 
                 RegisterCorona(asId + 8 + i, NULL, (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f),
-                               PickupCoronaIntensity, vectorOffset, 1.0f, 65.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.5f, 0, 15.0f, false, true);
+                               PickupCoronaIntensity, vectorOffset, 1.0f, 65.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.5f, 0, 15.0f, false, false);
             }
             
             break;
