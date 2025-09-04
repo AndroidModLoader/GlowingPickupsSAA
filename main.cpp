@@ -6,13 +6,11 @@
 
 #ifdef AML32
     #include "GTASA_STRUCTS.h"
-    #define BYVER(__for32, __for64) (__for32)
 #else
     #include "GTASA_STRUCTS_210.h"
-    #define BYVER(__for32, __for64) (__for64)
 #endif
 
-MYMODCFG(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.4, kagikn & RusJJ)
+MYMODCFGNAME(net.kagikn.rusjj.glowingpickups, GTA:SA Glowing Pickups, 1.4, kagikn & RusJJ, GlowingPickupsSAA)
 NEEDGAME(com.rockstargames.gtasa)
 
 #define CFG_COLOR(__clr_var)  *(rgba_t*)&PickupColors::__clr_var = cfg->GetColor(#__clr_var, (rgba_t&)PickupColors::__clr_var, "Colors")
@@ -21,8 +19,9 @@ NEEDGAME(com.rockstargames.gtasa)
 uintptr_t pGTASA;
 void* hGTASA;
 
-bool bDoBBoxCorona = true, bDoMoneyGlowing = true, bDoCollectiblesGlowing = true;
+bool bDoBBoxCorona = true, bDoMoneyGlowing = true, bDoCollectiblesGlowing = true, bDisableInCutscene = true, bEmitLight = true, bRandomPickupsGlowing = true;
 int nMoneyCoronaType = CORONATYPE_TORUS, nCollectCoronaType = CORONATYPE_TORUS, nCenteredCoronaType = CORONATYPE_SHINYSTAR, nOtherCoronaType = CORONATYPE_TORUS;
+float fCoronaScale = 1.0f;
 extern std::unordered_map<uint16_t, CRGBA&> PickupColorsMap;
 namespace PickupColors
 {
@@ -93,6 +92,7 @@ unsigned int* m_snTimeInMilliseconds;
 RwTexture** gpShadowExplosionTex;
 CPickup* aPickups;
 CBaseModelInfo** ms_modelInfoPtrs;
+bool* ms_running;
 
 // Game Funcs
 void (*RegisterCorona)(uintptr_t, CEntity*, unsigned char, unsigned char, unsigned char, unsigned char, CVector const&, float, float, unsigned char, unsigned char, unsigned char, unsigned char, unsigned char, float, bool, float, bool, float, bool, bool);
@@ -139,10 +139,10 @@ inline void DoPickupGlowing(CPickup* pu)
                 
                 uint8_t intensity = (uint8_t)((14.0f - distance) * (0.5f * sine + 0.5f) * 0.0714285746f * 255.0f);
                 
-                RegisterCorona(asId, NULL, intensity, intensity, intensity, PickupCoronaIntensity, ppos,
-                               0.6f, 40.0f, nCollectCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, false);
+                RegisterCorona(asId, NULL, intensity, intensity, intensity, PickupCoronaIntensity, ppos, fCoronaScale * 0.6f, 40.0f,
+                    nCollectCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, false, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
-                                  intensity, intensity, intensity, 4.0f, 1.0f, 40.0f, false, 0.0f);
+                    intensity, intensity, intensity, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             break;
         }
@@ -157,10 +157,10 @@ inline void DoPickupGlowing(CPickup* pu)
                 
                 uint8_t intensity = (uint8_t)((20.0f - distance) * (0.2f * sine + 0.3) * 0.05f * 64.0f);
                 
-                RegisterCorona(asId, NULL, 0, intensity, 0, PickupCoronaIntensity, ppos,
-                               0.25f, 40.0f, nMoneyCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, 0, 15.0f, false, false);
+                RegisterCorona(asId, NULL, 0, intensity, 0, PickupCoronaIntensity, ppos, fCoronaScale * 0.25f, 40.0f,
+                    nMoneyCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, 1.5f, false, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
-                                  0, intensity, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
+                    0, intensity, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             break;
         }
@@ -172,14 +172,22 @@ inline void DoPickupGlowing(CPickup* pu)
             CRGBA clr = PickupColors::FindFor(pu->m_pObject->m_nModelIndex);
             if(IsCenteredOnly(pu->m_pObject->m_nModelIndex))
             {
-                RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f),
-                               PickupCenteredCoronaIntensity, ppos, 1.2f, 50.0f, nCenteredCoronaType, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, 0, 15.0f, false, false);
+                RegisterCorona(asId + 9, NULL, (uint8_t)(clr.r * 0.495f), (uint8_t)(clr.g * 0.495f), (uint8_t)(clr.b * 0.495f), PickupCenteredCoronaIntensity,
+                    ppos, fCoronaScale * 1.2f, 50.0f, nCenteredCoronaType, FLARETYPE_NONE, true, false, 1, 0.0f, false, 1.5f, false, 15.0f, false, false);
                 break;
             }
             
-            bool glowInner, glowOuter;
+            bool glowInner = false, glowOuter = false;
             
-            uint8_t glowStage1 = (uint8_t)((*m_snTimeInMilliseconds >> 9) & 7);
+            uint8_t glowStage1;
+            if(bRandomPickupsGlowing)
+            {
+                glowStage1 = (uint8_t)(((*m_snTimeInMilliseconds + asId) >> 9) & 7);
+            }
+            else
+            {
+                glowStage1 = (uint8_t)((*m_snTimeInMilliseconds >> 9) & 7);
+            }
             uint8_t glowStage2 = (glowStage1 - 1) & 7;
             
             if(glowStage1 == 3) glowOuter = (rand() & 3) != 0;
@@ -191,30 +199,34 @@ inline void DoPickupGlowing(CPickup* pu)
             if(glowOuter)
             {
                 RegisterCorona(asId, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupOuterCoronaIntensity, ppos,
-                               0.76f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, false);
+                    fCoronaScale * 0.76f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, false, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
-                                  (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
-                                  
-                float lightRange = (rand() % 0xF) * 0.1f + 3.0f;
-                if(FindPlayerPed(-1)->m_nInterior == 0) AddLight(0, ppos, CVector(), lightRange, (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
+                    (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                               
+                if(bEmitLight)
+                {
+                    float lightRange = (rand() % 0xF) * 0.1f + 3.0f;
+                    if(FindPlayerPed(-1)->m_nInterior == 0) AddLight(0, ppos, CVector(), lightRange,
+                                                                (uint8_t)(clr.r * 0.0039f), (uint8_t)(clr.g * 0.0039f), (uint8_t)(clr.b * 0.0039f), 0, true, NULL);
+                }
             }
             else
             {
-                RegisterCorona(asId, NULL, 0, 0, 0, PickupOuterCoronaIntensity, ppos,
-                               0.76f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, true);
+                RegisterCorona(asId, NULL, 0, 0, 0, PickupOuterCoronaIntensity, ppos, fCoronaScale * 0.76f, 65.0f,
+                    nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, false, 15.0f, false, false);
             }
             
             if(glowInner)
             {
                 RegisterCorona(asId+1, NULL, (uint8_t)(clr.r * 0.45f), (uint8_t)(clr.g * 0.45f), (uint8_t)(clr.b * 0.45f), PickupInnerCoronaIntensity, ppos,
-                               0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, false);
+                    fCoronaScale * 0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, false, 15.0f, false, false);
                 StoreStaticShadow(asId, 2, *gpShadowExplosionTex, &ppos, 2.0f, 0, 0, -2.0f, 0x10,
-                                  (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
+                    (uint8_t)(clr.r * 0.2f), (uint8_t)(clr.g * 0.2f), (uint8_t)(clr.b * 0.2f), 4.0f, 1.0f, 40.0f, false, 0.0f);
             }
             else
             {
-                RegisterCorona(asId+1, NULL, 0, 0, 0, PickupInnerCoronaIntensity, ppos,
-                               0.6f, 65.0f, nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, 0, 15.0f, false, false);
+                RegisterCorona(asId+1, NULL, 0, 0, 0, PickupOuterCoronaIntensity, ppos, fCoronaScale * 0.6f, 65.0f,
+                    nOtherCoronaType, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.4f, false, 15.0f, false, false);
             }
             
             if(!bDoBBoxCorona) break;
@@ -259,8 +271,8 @@ inline void DoPickupGlowing(CPickup* pu)
                     break;
                 }
 
-                RegisterCorona(asId + 8 + i, NULL, (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f),
-                               PickupCoronaIntensity, vectorOffset, 1.0f, 65.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.5f, 0, 15.0f, false, false);
+                RegisterCorona(asId + 8 + i, NULL, (uint8_t)(clr.r * 0.15f), (uint8_t)(clr.g * 0.15f), (uint8_t)(clr.b * 0.15f), PickupCoronaIntensity,
+                    vectorOffset, fCoronaScale * 1.0f, 65.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, false, false, 0, 0.0f, false, -0.5f, false, 15.0f, false, false);
             }
             
             break;
@@ -272,6 +284,9 @@ inline void DoPickupGlowing(CPickup* pu)
 DECL_HOOKv(ProcessGame)
 {
     ProcessGame();
+
+    if(bDisableInCutscene && *ms_running) return;
+
     for(int i = 0; i < 620; ++i)
     {
         DoPickupGlowing(&aPickups[i]);
@@ -284,14 +299,15 @@ extern "C" void OnModLoad()
     pGTASA = aml->GetLib("libGTASA.so");
     hGTASA = aml->GetLibHandle("libGTASA.so");
     
-    SET_TO(aPickups, *(uintptr_t*)(pGTASA + BYVER(0x678BF8, 0x84F818)));
+    SET_TO(aPickups, *(uintptr_t*)(pGTASA + BYBIT(0x678BF8, 0x84F818)));
     SET_TO(TheCamera, aml->GetSym(hGTASA, "TheCamera"));
     SET_TO(m_snTimeInMilliseconds, aml->GetSym(hGTASA, "_ZN6CTimer22m_snTimeInMillisecondsE"));
     SET_TO(gpShadowExplosionTex, aml->GetSym(hGTASA, "gpShadowExplosionTex"));
-    SET_TO(ms_modelInfoPtrs, aml->GetSym(hGTASA, "_ZN10CModelInfo16ms_modelInfoPtrsE"));
+    SET_TO(ms_modelInfoPtrs, *(void**)(pGTASA + BYBIT(0x6796D4, 0x850DB8)));
+    SET_TO(ms_running, aml->GetSym(hGTASA, "_ZN12CCutsceneMgr10ms_runningE"));
     
-    SET_TO(RegisterCorona, aml->GetSym(hGTASA, BYVER("_ZN8CCoronas14RegisterCoronaEjP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb", "_ZN8CCoronas14RegisterCoronaEyP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb")));
-    SET_TO(StoreStaticShadow, aml->GetSym(hGTASA, BYVER("_ZN8CShadows17StoreStaticShadowEjhP9RwTextureP7CVectorffffshhhfffbf", "_ZN8CShadows17StoreStaticShadowEyhP9RwTextureP7CVectorffffshhhfffbf")));
+    SET_TO(RegisterCorona, aml->GetSym(hGTASA, BYBIT("_ZN8CCoronas14RegisterCoronaEjP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb", "_ZN8CCoronas14RegisterCoronaEyP7CEntityhhhhRK7CVectorffhhhhhfbfbfbb")));
+    SET_TO(StoreStaticShadow, aml->GetSym(hGTASA, BYBIT("_ZN8CShadows17StoreStaticShadowEjhP9RwTextureP7CVectorffffshhhfffbf", "_ZN8CShadows17StoreStaticShadowEyhP9RwTextureP7CVectorffffshhhfffbf")));
     SET_TO(AddLight, aml->GetSym(hGTASA, "_ZN12CPointLights8AddLightEh7CVectorS0_ffffhbP7CEntity"));
     SET_TO(FindPlayerPed, aml->GetSym(hGTASA, "_Z13FindPlayerPedi"));
     SET_TO(TransformPoint, aml->GetSym(hGTASA, "_Z14TransformPointR5RwV3dRK16CSimpleTransformRKS_"));
@@ -316,17 +332,23 @@ extern "C" void OnModLoad()
     CFG_COLOR(PropertyLocked);
     CFG_COLOR(Yellow);
     
-    PickupCoronaIntensity = cfg->GetInt("PickupCoronaIntensity", (int)PickupCoronaIntensity);
-    PickupCenteredCoronaIntensity = cfg->GetInt("PickupCenteredCoronaIntensity", (int)PickupCenteredCoronaIntensity);
-    PickupOuterCoronaIntensity = cfg->GetInt("PickupOuterCoronaIntensity", (int)PickupOuterCoronaIntensity);
-    PickupInnerCoronaIntensity = cfg->GetInt("PickupInnerCoronaIntensity", (int)PickupInnerCoronaIntensity);
+    PickupCoronaIntensity = cfg->GetInt("PickupCoronaIntensity", (int)PickupCoronaIntensity, "CoronaSettings");
+    PickupCenteredCoronaIntensity = cfg->GetInt("PickupCenteredCoronaIntensity", (int)PickupCenteredCoronaIntensity, "CoronaSettings");
+    PickupOuterCoronaIntensity = cfg->GetInt("PickupOuterCoronaIntensity", (int)PickupOuterCoronaIntensity, "CoronaSettings");
+    PickupInnerCoronaIntensity = cfg->GetInt("PickupInnerCoronaIntensity", (int)PickupInnerCoronaIntensity, "CoronaSettings");
     
-    bDoBBoxCorona = cfg->GetBool("DoBBoxCorona", bDoBBoxCorona);
-    bDoMoneyGlowing = cfg->GetBool("DoMoneyGlowing", bDoMoneyGlowing);
-    bDoCollectiblesGlowing = cfg->GetBool("DoCollectiblesGlowing", bDoCollectiblesGlowing);
+    bDoBBoxCorona = cfg->GetBool("DoBBoxCorona", bDoBBoxCorona, "Settings");
+    bDoMoneyGlowing = cfg->GetBool("DoMoneyGlowing", bDoMoneyGlowing, "Settings");
+    bDoCollectiblesGlowing = cfg->GetBool("DoCollectiblesGlowing", bDoCollectiblesGlowing, "Settings");
+    bDisableInCutscene = cfg->GetBool("DisableInCutscene", bDisableInCutscene, "Settings");
+    bEmitLight = cfg->GetBool("EmitLight", bEmitLight, "Settings");
+    bRandomPickupsGlowing = cfg->GetBool("RandomPickupsGlowing", bRandomPickupsGlowing, "Settings");
     
-    nMoneyCoronaType = cfg->GetBool("MoneyCoronaType", nMoneyCoronaType);
-    nCollectCoronaType = cfg->GetBool("CollectibleCoronaType", nCollectCoronaType);
-    nCenteredCoronaType = cfg->GetBool("CenteredCoronaType", nCenteredCoronaType);
-    nOtherCoronaType = cfg->GetBool("OtherCoronaType", nOtherCoronaType);
+    nMoneyCoronaType = cfg->GetInt("MoneyCoronaType", nMoneyCoronaType, "CoronaSettings");
+    nCollectCoronaType = cfg->GetInt("CollectibleCoronaType", nCollectCoronaType, "CoronaSettings");
+    nCenteredCoronaType = cfg->GetInt("CenteredCoronaType", nCenteredCoronaType, "CoronaSettings");
+    nOtherCoronaType = cfg->GetInt("OtherCoronaType", nOtherCoronaType, "CoronaSettings");
+
+    fCoronaScale = cfg->GetFloat("CoronaScale", fCoronaScale, "CoronaSettings");
+    clampfloat(0.2f, 1.5f, &fCoronaScale);
 }
